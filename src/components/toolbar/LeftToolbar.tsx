@@ -34,8 +34,6 @@ interface LeftToolbarProps {
 const LeftToolbar = ({
   color,
   strokeWidth,
-  brushType,
-  shapeType,
   isEraseMode,
   onColorChange,
   onStrokeWidthChange,

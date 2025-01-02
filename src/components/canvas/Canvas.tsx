@@ -214,6 +214,11 @@ const Canvas = forwardRef<HTMLCanvasElement, CanvasProps>(({
   const [resizeHandle, setResizeHandle] = useState<'nw' | 'ne' | 'sw' | 'se' | null>(null);
   const [hoverHandle, setHoverHandle] = useState<'nw' | 'ne' | 'sw' | 'se' | null>(null);
 
+  const getCanvas = useCallback(() => {
+    if (typeof ref === 'function') return internalCanvasRef.current;
+    return ref?.current || internalCanvasRef.current;
+  }, [ref]);
+
   useEffect(() => {
     setIsReady(true);
     // Center the canvas initially
@@ -224,12 +229,7 @@ const Canvas = forwardRef<HTMLCanvasElement, CanvasProps>(({
         y: (containerHeight - height) / 2
       });
     }
-  }, [width, height]);
-
-  const getCanvas = useCallback(() => {
-    if (typeof ref === 'function') return internalCanvasRef.current;
-    return ref?.current || internalCanvasRef.current;
-  }, [ref]);
+  }, [width, height, getCanvas]);
 
   // Add zoom handlers
   const handleZoomIn = useCallback(() => {
