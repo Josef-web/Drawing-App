@@ -1,7 +1,7 @@
 import { Slider } from "@/components/ui/slider";
-import { BrushType, ShapeType } from "./Toolbar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { memo, useCallback } from "react";
 
 const MODERN_COLORS = [
   '#000000', // Black
@@ -24,12 +24,64 @@ const MODERN_COLORS = [
 interface LeftToolbarProps {
   color: string;
   strokeWidth: number;
-  brushType: BrushType;
-  shapeType: ShapeType;
   isEraseMode: boolean;
   onColorChange: (color: string) => void;
   onStrokeWidthChange: (width: number) => void;
 }
+
+const ColorButton = memo(({ color, isSelected, onClick }: { 
+  color: string; 
+  isSelected: boolean; 
+  onClick: () => void;
+}) => (
+  <Tooltip>
+    <TooltipTrigger asChild>
+      <div
+        onClick={onClick}
+        className={cn(
+          "w-8 h-8 rounded-full border-2 transition-all duration-200 cursor-pointer",
+          "hover:scale-110 hover:shadow-lg",
+          "focus:outline-none focus:ring-2 focus:ring-primary/50",
+          isSelected 
+            ? "border-primary shadow-sm scale-110" 
+            : "border-border/20"
+        )}
+        style={{
+          backgroundColor: color,
+          boxShadow: color === '#FFFFFF' ? '0 0 0 1px rgba(0,0,0,0.1)' : undefined
+        }}
+      />
+    </TooltipTrigger>
+    <TooltipContent>
+      <p className="text-xs font-medium">{color}</p>
+    </TooltipContent>
+  </Tooltip>
+));
+
+ColorButton.displayName = 'ColorButton';
+
+const CustomColorPicker = memo(({ color, onColorChange }: { 
+  color: string; 
+  onColorChange: (color: string) => void;
+}) => (
+  <div className="flex items-center gap-3 mt-2 p-2 rounded-lg bg-muted/50">
+    <div className="relative group">
+      <input
+        type="color"
+        value={color}
+        onChange={(e) => onColorChange(e.target.value)}
+        className="w-8 h-8 rounded-md cursor-pointer border border-border/20 transition-all duration-200 hover:scale-105"
+      />
+      <div className="absolute inset-0 rounded-md ring-2 ring-border/20 pointer-events-none transition-all duration-200 group-hover:ring-primary/30" />
+    </div>
+    <div className="flex flex-col">
+      <span className="text-xs font-medium">Custom color</span>
+      <span className="text-xs text-muted-foreground">{color.toUpperCase()}</span>
+    </div>
+  </div>
+));
+
+CustomColorPicker.displayName = 'CustomColorPicker';
 
 const LeftToolbar = ({
   color,
@@ -39,6 +91,10 @@ const LeftToolbar = ({
   onStrokeWidthChange,
 }: LeftToolbarProps) => {
   const showControls = !isEraseMode;
+
+  const handleStrokeWidthChange = useCallback((value: number[]) => {
+    onStrokeWidthChange(value[0]);
+  }, [onStrokeWidthChange]);
 
   if (!showControls) return null;
 
@@ -53,7 +109,7 @@ const LeftToolbar = ({
           <div className="w-full px-1 py-4">
             <Slider
               value={[strokeWidth]}
-              onValueChange={(value) => onStrokeWidthChange(value[0])}
+              onValueChange={handleStrokeWidthChange}
               min={1}
               max={20}
               step={1}
@@ -72,46 +128,16 @@ const LeftToolbar = ({
           <span className="text-sm font-semibold tracking-tight">Colors</span>
           <div className="grid grid-cols-5 gap-2">
             {MODERN_COLORS.map((baseColor) => (
-              <Tooltip key={baseColor}>
-                <TooltipTrigger asChild>
-                  <div
-                    onClick={() => onColorChange(baseColor)}
-                    className={cn(
-                      "w-8 h-8 rounded-full border-2 transition-all duration-200 cursor-pointer",
-                      "hover:scale-110 hover:shadow-lg",
-                      "focus:outline-none focus:ring-2 focus:ring-primary/50",
-                      color === baseColor 
-                        ? "border-primary shadow-sm scale-110" 
-                        : "border-border/20"
-                    )}
-                    style={{
-                      backgroundColor: baseColor,
-                      boxShadow: baseColor === '#FFFFFF' ? '0 0 0 1px rgba(0,0,0,0.1)' : undefined
-                    }}
-                  />
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p className="text-xs font-medium">{baseColor}</p>
-                </TooltipContent>
-              </Tooltip>
+              <ColorButton
+                key={baseColor}
+                color={baseColor}
+                isSelected={color === baseColor}
+                onClick={() => onColorChange(baseColor)}
+              />
             ))}
           </div>
           
-          <div className="flex items-center gap-3 mt-2 p-2 rounded-lg bg-muted/50">
-            <div className="relative group">
-              <input
-                type="color"
-                value={color}
-                onChange={(e) => onColorChange(e.target.value)}
-                className="w-8 h-8 rounded-md cursor-pointer border border-border/20 transition-all duration-200 hover:scale-105"
-              />
-              <div className="absolute inset-0 rounded-md ring-2 ring-border/20 pointer-events-none transition-all duration-200 group-hover:ring-primary/30" />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-xs font-medium">Custom color</span>
-              <span className="text-xs text-muted-foreground">{color.toUpperCase()}</span>
-            </div>
-          </div>
+          <CustomColorPicker color={color} onColorChange={onColorChange} />
         </div>
       </div>
     </TooltipProvider>

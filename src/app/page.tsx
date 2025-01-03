@@ -38,26 +38,28 @@ export default function Home() {
   const [shapes, setShapes] = useState<Shape[]>([]);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
+  // Memoize the updateDimensions callback
+  const updateDimensions = useCallback(() => {
+    setDimensions({
+      width: window.innerWidth,
+      height: window.innerHeight - 80,
+    });
+  }, []);
+
   useEffect(() => {
     setIsMounted(true);
-    const updateDimensions = () => {
-      setDimensions({
-        width: window.innerWidth,
-        height: window.innerHeight - 80,
-      });
-    };
     updateDimensions();
     window.addEventListener('resize', updateDimensions);
     return () => window.removeEventListener('resize', updateDimensions);
-  }, []);
+  }, [updateDimensions]);
 
   const handleUndo = useCallback(() => {
     if (shapes.length > 0) {
-      setShapes((prev) => prev.slice(0, -1));
-    } else {
-      setStrokes((prev) => prev.slice(0, -1));
+      setShapes(prev => prev.slice(0, -1));
+    } else if (strokes.length > 0) {
+      setStrokes(prev => prev.slice(0, -1));
     }
-  }, [shapes.length]);
+  }, [shapes.length, strokes.length]);
 
   const handleDownload = useCallback(() => {
     const canvas = canvasRef.current;
@@ -68,6 +70,10 @@ export default function Home() {
     link.download = 'drawing.png';
     link.href = dataUrl;
     link.click();
+  }, []);
+
+  const handleToggleEraseMode = useCallback(() => {
+    setIsEraseMode(prev => !prev);
   }, []);
 
   if (!isMounted) {
@@ -112,15 +118,13 @@ export default function Home() {
           onUndo={handleUndo}
           onDownload={handleDownload}
           isEraseMode={isEraseMode}
-          onToggleEraseMode={() => setIsEraseMode(!isEraseMode)}
+          onToggleEraseMode={handleToggleEraseMode}
           className="inline-flex items-center gap-4 p-2 bg-card/80 backdrop-blur-sm shadow-md rounded-full border border-border"
         />
       </div>
       <LeftToolbar
         color={color}
         strokeWidth={strokeWidth}
-        brushType={brushType}
-        shapeType={shapeType}
         isEraseMode={isEraseMode}
         onColorChange={setColor}
         onStrokeWidthChange={setStrokeWidth}

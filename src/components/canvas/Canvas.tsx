@@ -518,12 +518,10 @@ const Canvas = forwardRef<HTMLCanvasElement, CanvasProps>(({
   }, [strokes, shapes, currentShape, selectedElement, drawStroke, drawSelectionBox]);
 
   const isPointNearStroke = useCallback((x: number, y: number, strokePoints: Point[]) => {
-    // Check if any segment of the stroke is near the point
     for (let i = 0; i < strokePoints.length - 1; i++) {
       const p1 = strokePoints[i];
       const p2 = strokePoints[i + 1];
       
-      // Calculate distance from point to line segment
       const A = x - p1.x;
       const B = y - p1.y;
       const C = p2.x - p1.x;
@@ -531,28 +529,16 @@ const Canvas = forwardRef<HTMLCanvasElement, CanvasProps>(({
 
       const dot = A * C + B * D;
       const lenSq = C * C + D * D;
-      let param = -1;
+      
+      if (lenSq === 0) continue;
 
-      if (lenSq !== 0) param = dot / lenSq;
-
-      let xx, yy;
-
-      if (param < 0) {
-        xx = p1.x;
-        yy = p1.y;
-      } else if (param > 1) {
-        xx = p2.x;
-        yy = p2.y;
-      } else {
-        xx = p1.x + param * C;
-        yy = p1.y + param * D;
-      }
+      const param = dot / lenSq;
+      const xx = param < 0 ? p1.x : param > 1 ? p2.x : p1.x + param * C;
+      const yy = param < 0 ? p1.y : param > 1 ? p2.y : p1.y + param * D;
 
       const dx = x - xx;
       const dy = y - yy;
-      const distance = Math.sqrt(dx * dx + dy * dy);
-
-      if (distance < strokeWidth * 2.5) return true;
+      if (Math.sqrt(dx * dx + dy * dy) < strokeWidth * 2.5) return true;
     }
     return false;
   }, [strokeWidth]);
@@ -785,9 +771,10 @@ const Canvas = forwardRef<HTMLCanvasElement, CanvasProps>(({
     if (denominator === 0) return false;
 
     const ua = (((p4.x - p3.x) * (p1.y - p3.y)) - ((p4.y - p3.y) * (p1.x - p3.x))) / denominator;
-    const ub = (((p2.x - p1.x) * (p1.y - p3.y)) - ((p2.y - p1.y) * (p1.x - p3.x))) / denominator;
+    if (ua < 0 || ua > 1) return false;
 
-    return (ua >= 0 && ua <= 1) && (ub >= 0 && ub <= 1);
+    const ub = (((p2.x - p1.x) * (p1.y - p3.y)) - ((p2.y - p1.y) * (p1.x - p3.x))) / denominator;
+    return (ub >= 0 && ub <= 1);
   }, []);
 
   const getResizeHandle = useCallback((x: number, y: number, element: Shape | Stroke) => {

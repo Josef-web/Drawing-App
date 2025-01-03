@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Eraser, Pencil, Undo2, Download, Square, Triangle, ArrowRight, Paintbrush, PenTool, Brush, Zap, Circle, Diamond, MousePointer, Type } from "lucide-react";
-import { useState, useEffect } from "react";
+import { memo, useCallback, useState, useEffect } from "react";
 
 export type BrushType = 'normal' | 'rough' | 'sketchy' | 'laser';
 export type ShapeType = 'none' | 'square' | 'triangle' | 'arrow' | 'diamond' | 'circle' | 'select' | 'text';
@@ -23,7 +23,7 @@ interface ToolbarProps {
   className?: string;
 }
 
-const BrushTypeIcon = ({ type }: { type: BrushType }) => {
+const BrushTypeIcon = memo(({ type }: { type: BrushType }) => {
   switch (type) {
     case 'normal':
       return <Paintbrush className="h-4 w-4" />;
@@ -34,7 +34,90 @@ const BrushTypeIcon = ({ type }: { type: BrushType }) => {
     case 'laser':
       return <Zap className="h-4 w-4 text-red-500 animate-pulse" />;
   }
-};
+});
+
+BrushTypeIcon.displayName = 'BrushTypeIcon';
+
+const BrushMenu = memo(({ 
+  brushType, 
+  showMenu, 
+  onBrushTypeChange, 
+  onShapeTypeChange, 
+  onClose 
+}: { 
+  brushType: BrushType;
+  showMenu: boolean;
+  onBrushTypeChange: (type: BrushType) => void;
+  onShapeTypeChange: (type: ShapeType) => void;
+  onClose: () => void;
+}) => {
+  const handleBrushChange = useCallback((type: BrushType) => {
+    onBrushTypeChange(type);
+    onShapeTypeChange('none');
+    onClose();
+  }, [onBrushTypeChange, onShapeTypeChange, onClose]);
+
+  return (
+    <div className={`absolute left-0 top-[calc(100%+4px)] bg-card/80 backdrop-blur-[24px] shadow-lg rounded-lg overflow-hidden transition-all duration-200 z-50 min-w-[40px] ${
+      showMenu ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-1 pointer-events-none'
+    }`} suppressHydrationWarning>
+      <div className="flex flex-col p-1 gap-1">
+        {[
+          { type: 'normal' as BrushType, icon: <Paintbrush className="h-4 w-4" />, label: 'Normal' },
+          { type: 'rough' as BrushType, icon: <Brush className="h-4 w-4" />, label: 'Rough' },
+          { type: 'sketchy' as BrushType, icon: <PenTool className="h-4 w-4" />, label: 'Sketchy' },
+          { type: 'laser' as BrushType, icon: <Zap className="h-4 w-4 text-red-500 animate-pulse" />, label: 'Laser' }
+        ].map(({ type, icon, label }) => (
+          <Button
+            key={type}
+            variant={brushType === type ? 'secondary' : 'ghost'}
+            size="icon"
+            onClick={() => handleBrushChange(type)}
+            className="flex items-center gap-2 w-full px-3 justify-start"
+            suppressHydrationWarning
+          >
+            {icon}
+            <span className="text-sm">{label}</span>
+          </Button>
+        ))}
+      </div>
+    </div>
+  );
+});
+
+BrushMenu.displayName = 'BrushMenu';
+
+const ShapeButton = memo(({ 
+  type, 
+  currentType, 
+  icon, 
+  onShapeTypeChange, 
+  disabled 
+}: { 
+  type: ShapeType;
+  currentType: ShapeType;
+  icon: React.ReactNode;
+  onShapeTypeChange: (type: ShapeType) => void;
+  disabled: boolean;
+}) => {
+  const handleClick = useCallback(() => {
+    onShapeTypeChange(currentType === type ? 'none' : type);
+  }, [currentType, type, onShapeTypeChange]);
+
+  return (
+    <Button
+      variant={currentType === type ? 'secondary' : 'ghost'}
+      size="icon"
+      onClick={handleClick}
+      disabled={disabled}
+      suppressHydrationWarning
+    >
+      {icon}
+    </Button>
+  );
+});
+
+ShapeButton.displayName = 'ShapeButton';
 
 const Toolbar = ({
   brushType,
@@ -45,7 +128,11 @@ const Toolbar = ({
   onDownload,
   isEraseMode,
   onToggleEraseMode,
-  className
+  className,
+  color,
+  strokeWidth,
+  onColorChange,
+  onStrokeWidthChange,
 }: ToolbarProps) => {
   const [showBrushMenu, setShowBrushMenu] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
@@ -54,42 +141,32 @@ const Toolbar = ({
     setIsMounted(true);
   }, []);
 
+  const handleBrushClick = useCallback(() => {
+    onBrushTypeChange('normal');
+    onShapeTypeChange('none');
+    setShowBrushMenu(!showBrushMenu);
+  }, [onBrushTypeChange, onShapeTypeChange, showBrushMenu]);
+
   if (!isMounted) {
     return <div className="flex items-center gap-2" suppressHydrationWarning />;
   }
 
   return (
     <div className={`${className} flex items-center gap-2`} suppressHydrationWarning>
-      <Button
-        variant={shapeType === 'select' ? 'secondary' : 'ghost'}
-        size="icon"
-        onClick={() => {
-          if (shapeType === 'select') {
-            onShapeTypeChange('none');
-          } else {
-            onShapeTypeChange('select');
-          }
-        }}
+      <ShapeButton
+        type="select"
+        currentType={shapeType}
+        icon={<MousePointer className="h-4 w-4" />}
+        onShapeTypeChange={onShapeTypeChange}
         disabled={isEraseMode}
-        suppressHydrationWarning
-      >
-        <MousePointer className="h-4 w-4" />
-      </Button>
-      <Button
-        variant={shapeType === 'text' ? 'secondary' : 'ghost'}
-        size="icon"
-        onClick={() => {
-          if (shapeType === 'text') {
-            onShapeTypeChange('none');
-          } else {
-            onShapeTypeChange('text');
-          }
-        }}
+      />
+      <ShapeButton
+        type="text"
+        currentType={shapeType}
+        icon={<Type className="h-4 w-4" />}
+        onShapeTypeChange={onShapeTypeChange}
         disabled={isEraseMode}
-        suppressHydrationWarning
-      >
-        <Type className="h-4 w-4" />
-      </Button>
+      />
       <div 
         className="relative"
         onMouseEnter={() => setShowBrushMenu(true)}
@@ -100,157 +177,39 @@ const Toolbar = ({
           size="icon"
           className={`relative ${shapeType === 'none' ? (brushType !== 'normal' ? 'bg-secondary' : '') : ''}`}
           disabled={isEraseMode}
-          onClick={() => {
-            onBrushTypeChange('normal');
-            onShapeTypeChange('none');
-            setShowBrushMenu(!showBrushMenu);
-          }}
+          onClick={handleBrushClick}
           suppressHydrationWarning
         >
           <BrushTypeIcon type={brushType} />
         </Button>
         <div className="absolute left-0 w-full h-2 bg-transparent" />
         {isMounted && (
-          <div className={`absolute left-0 top-[calc(100%+4px)] bg-card/80 backdrop-blur-[24px] shadow-lg rounded-lg overflow-hidden transition-all duration-200 z-50 min-w-[40px] ${
-            showBrushMenu ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-1 pointer-events-none'
-          }`} suppressHydrationWarning>
-            <div className="flex flex-col p-1 gap-1">
-              <Button
-                variant={brushType === 'normal' ? 'secondary' : 'ghost'}
-                size="icon"
-                onClick={() => {
-                  onBrushTypeChange('normal');
-                  onShapeTypeChange('none');
-                  setShowBrushMenu(false);
-                }}
-                className="flex items-center gap-2 w-full px-3 justify-start"
-                suppressHydrationWarning
-              >
-                <Paintbrush className="h-4 w-4" />
-                <span className="text-sm">Normal</span>
-              </Button>
-              <Button
-                variant={brushType === 'rough' ? 'secondary' : 'ghost'}
-                size="icon"
-                onClick={() => {
-                  onBrushTypeChange('rough');
-                  onShapeTypeChange('none');
-                  setShowBrushMenu(false);
-                }}
-                className="flex items-center gap-2 w-full px-3 justify-start"
-                suppressHydrationWarning
-              >
-                <Brush className="h-4 w-4" />
-                <span className="text-sm">Rough</span>
-              </Button>
-              <Button
-                variant={brushType === 'sketchy' ? 'secondary' : 'ghost'}
-                size="icon"
-                onClick={() => {
-                  onBrushTypeChange('sketchy');
-                  onShapeTypeChange('none');
-                  setShowBrushMenu(false);
-                }}
-                className="flex items-center gap-2 w-full px-3 justify-start"
-                suppressHydrationWarning
-              >
-                <PenTool className="h-4 w-4" />
-                <span className="text-sm">Sketchy</span>
-              </Button>
-              <Button
-                variant={brushType === 'laser' ? 'secondary' : 'ghost'}
-                size="icon"
-                onClick={() => {
-                  onBrushTypeChange('laser');
-                  onShapeTypeChange('none');
-                  setShowBrushMenu(false);
-                }}
-                className="flex items-center gap-2 w-full px-3 justify-start"
-                suppressHydrationWarning
-              >
-                <Zap className="h-4 w-4 text-red-500 animate-pulse" />
-                <span className="text-sm">Laser</span>
-              </Button>
-            </div>
-          </div>
+          <BrushMenu
+            brushType={brushType}
+            showMenu={showBrushMenu}
+            onBrushTypeChange={onBrushTypeChange}
+            onShapeTypeChange={onShapeTypeChange}
+            onClose={() => setShowBrushMenu(false)}
+          />
         )}
       </div>
       <div className="flex gap-1">
-        <Button
-          variant={shapeType === 'square' ? 'secondary' : 'ghost'}
-          size="icon"
-          onClick={() => {
-            if (shapeType === 'square') {
-              onShapeTypeChange('none');
-            } else {
-              onShapeTypeChange('square');
-            }
-          }}
-          disabled={isEraseMode}
-          suppressHydrationWarning
-        >
-          <Square className="h-4 w-4" />
-        </Button>
-        <Button
-          variant={shapeType === 'triangle' ? 'secondary' : 'ghost'}
-          size="icon"
-          onClick={() => {
-            if (shapeType === 'triangle') {
-              onShapeTypeChange('none');
-            } else {
-              onShapeTypeChange('triangle');
-            }
-          }}
-          disabled={isEraseMode}
-          suppressHydrationWarning
-        >
-          <Triangle className="h-4 w-4" />
-        </Button>
-        <Button
-          variant={shapeType === 'arrow' ? 'secondary' : 'ghost'}
-          size="icon"
-          onClick={() => {
-            if (shapeType === 'arrow') {
-              onShapeTypeChange('none');
-            } else {
-              onShapeTypeChange('arrow');
-            }
-          }}
-          disabled={isEraseMode}
-          suppressHydrationWarning
-        >
-          <ArrowRight className="h-4 w-4" />
-        </Button>
-        <Button
-          variant={shapeType === 'diamond' ? 'secondary' : 'ghost'}
-          size="icon"
-          onClick={() => {
-            if (shapeType === 'diamond') {
-              onShapeTypeChange('none');
-            } else {
-              onShapeTypeChange('diamond');
-            }
-          }}
-          disabled={isEraseMode}
-          suppressHydrationWarning
-        >
-          <Diamond className="h-4 w-4" />
-        </Button>
-        <Button
-          variant={shapeType === 'circle' ? 'secondary' : 'ghost'}
-          size="icon"
-          onClick={() => {
-            if (shapeType === 'circle') {
-              onShapeTypeChange('none');
-            } else {
-              onShapeTypeChange('circle');
-            }
-          }}
-          disabled={isEraseMode}
-          suppressHydrationWarning
-        >
-          <Circle className="h-4 w-4" />
-        </Button>
+        {[
+          { type: 'square' as ShapeType, icon: <Square className="h-4 w-4" /> },
+          { type: 'triangle' as ShapeType, icon: <Triangle className="h-4 w-4" /> },
+          { type: 'arrow' as ShapeType, icon: <ArrowRight className="h-4 w-4" /> },
+          { type: 'diamond' as ShapeType, icon: <Diamond className="h-4 w-4" /> },
+          { type: 'circle' as ShapeType, icon: <Circle className="h-4 w-4" /> }
+        ].map(({ type, icon }) => (
+          <ShapeButton
+            key={type}
+            type={type}
+            currentType={shapeType}
+            icon={icon}
+            onShapeTypeChange={onShapeTypeChange}
+            disabled={isEraseMode}
+          />
+        ))}
       </div>
       <Button 
         variant="ghost" 
