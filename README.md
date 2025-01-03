@@ -2,7 +2,6 @@
 
 A feature-rich, responsive drawing application built with Next.js 13, React, and TypeScript. This app provides a modern and intuitive interface for digital drawing and sketching.
 
-🔗 **[Live Demo](https://drawing-app-demo.vercel.app)** | [GitHub Repository](https://github.com/yourusername/drawing-app)
 
 ![Drawing App Screenshot]
 *[Add a screenshot of your app here]*
